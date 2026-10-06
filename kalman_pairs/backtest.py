@@ -42,11 +42,11 @@ def backtest(y, x, target, hedge, cost_bps=5.0, lag=1):
     held[lag:] = target[: n - lag]
 
     pnl = np.zeros(n)
+    costs = np.zeros(n)
     shares_y = shares_x = 0.0
     position = 0
 
     for t in range(1, n):
-        cost = 0.0
         if held[t] != position:
             # trade at close t-1. buy 1/G of y and sell beta/G of x where G = y + |beta| x,
             # so the whole position is worth 1
@@ -58,12 +58,12 @@ def backtest(y, x, target, hedge, cost_bps=5.0, lag=1):
                 new_y = held[t] / G
                 new_x = -held[t] * b / G
             traded = abs(new_y - shares_y) * y[t - 1] + abs(new_x - shares_x) * x[t - 1]
-            cost = cost_bps / 10_000 * traded
+            costs[t] = cost_bps / 10_000 * traded
             shares_y, shares_x, position = new_y, new_x, held[t]
 
-        pnl[t] = shares_y * (y[t] - y[t - 1]) + shares_x * (x[t] - x[t - 1]) - cost
+        pnl[t] = shares_y * (y[t] - y[t - 1]) + shares_x * (x[t] - x[t - 1]) - costs[t]
 
-    return pnl, held
+    return pnl, held, costs
 
 
 def sharpe_ratio(pnl):
@@ -86,11 +86,12 @@ def max_drawdown(pnl):
     return np.max((peak - equity) / peak)
 
 
-def summarise(pnl, held):
+def summarise(pnl, held, costs):
     return {
         "sharpe": sharpe_ratio(pnl),
         "max_drawdown": max_drawdown(pnl),
         "total_return": pnl.sum(),
+        "gross_return": pnl.sum() + costs.sum(),  # before costs
         "trades": np.count_nonzero(np.diff(held)),
         "time_in_market": np.mean(held != 0),
     }

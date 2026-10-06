@@ -55,8 +55,8 @@ def split_index(dates, train_years):
 def trade(y, x, z, hedge, split, cfg):
     target = zscore_positions(z, cfg.entry_z, cfg.exit_z)
     target[:split] = 0  # no trading in the training year
-    pnl, held = backtest(y, x, target, hedge, cfg.cost_bps, cfg.lag)
-    metrics = summarise(pnl[split:], held[split:])
+    pnl, held, costs = backtest(y, x, target, hedge, cfg.cost_bps, cfg.lag)
+    metrics = summarise(pnl[split:], held[split:], costs[split:])
     return StrategyResult(z, hedge, target, held, pnl, metrics)
 
 
